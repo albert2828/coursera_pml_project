@@ -1,6 +1,37 @@
 ---
-title: "Course Project- Practical Machine Learning"
+title: "Course Project - Practical Machine Learning"
 author: "Alberto Macías"
 date: "5/3/2021"
 output: html_document
 ---
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=F, include=F}
+library(ggplot2)
+library(dplyr)
+library(caret)
+```
+
+```{r}
+training <- read.csv("./data/pml-training.csv", header = T)
+testing <- read.csv("./data/pml-testing.csv", header = T)
+head(training)
+```
+
+## Feature selection
+
+```{r}
+training <- training[,-1:-5]
+training <- training[,-7:-31]
+training <- training[,-20:-43]
+training <- training[,-23:-37]
+training <- training[,-24:-33]
+training <- training[,-36:-50]
+training <- training[,-37:-46]
+training$new_window <- as.factor(training$new_window)
+training$classe <- as.factor(training$classe)
+```
+
