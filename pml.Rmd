@@ -1,0 +1,6 @@
+---
+title: "Course Project- Practical Machine Learning"
+author: "Alberto Macías"
+date: "5/3/2021"
+output: html_document
+---
