@@ -13,25 +13,124 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(dplyr)
 library(caret)
+library(e1071)
+library(klaR)
 ```
 
 ```{r}
 training <- read.csv("./data/pml-training.csv", header = T)
 testing <- read.csv("./data/pml-testing.csv", header = T)
-head(training)
 ```
 
-## Feature selection
+## Feature selection and preprocessing
 
 ```{r}
-training <- training[,-1:-5]
-training <- training[,-7:-31]
-training <- training[,-20:-43]
-training <- training[,-23:-37]
-training <- training[,-24:-33]
-training <- training[,-36:-50]
-training <- training[,-37:-46]
-training$new_window <- as.factor(training$new_window)
 training$classe <- as.factor(training$classe)
+training <- training[,-1:-7]
+training <- training[,-5:-29]
+training <- training[,-18:-27]
+training <- training[,-27:-41]
+training <- training[,-30:-44]
+training <- training[,-31:-40]
+training <- training[,-43:-57]
+training <- training[,-44:-53]
 ```
+
+
+```{r}
+set.seed(3455)
+inBuild <- createDataPartition(training$classe, p=0.8, list = F)
+buildData <- training[inBuild,]
+validationData <- training[-inBuild,]
+inTrain <- createDataPartition(buildData$classe, p=0.8, list = F)
+trainData <- buildData[inTrain,]
+testData <- buildData[-inTrain,]
+```
+
+
+```{r}
+set.seed(1212)
+trainClasse <- trainData$classe; trainData <- trainData[,-53]
+preproc <- preProcess(trainData, method = c("pca", "center", "scale"))
+preprocessedData <- predict(preproc, trainData)
+preprocessedData$classe <- trainClasse
+```
+
+
+### Model tunning
+
+```{r, echo=F}
+set.seed(22)
+rfmodel <- train(classe~., method="rf", data = preprocessedData,
+                 trControl= trainControl(method = "cv", number = 3))
+ldamodel <- train(classe~., method="lda", data = preprocessedData)
+svmmodel <- svm(classe~., data=preprocessedData)
+```
+
+```{r}
+testClasse <- testData$classe; testData <- testData[,-53]
+processedTestData <- predict(preproc, testData)
+processedTestData$classe <- testClasse
+predrf <- predict(rfmodel, processedTestData)
+predlda <- predict(ldamodel, processedTestData)
+predsvm <- predict(svmmodel, processedTestData)
+```
+
+```{r}
+print("Random Forest model Accuracy:")
+confusionMatrix(testClasse, predrf)$overall["Accuracy"]
+print("Linear Discriminant Analysis model Accuracy: ")
+confusionMatrix(testClasse, predlda)$overall["Accuracy"]
+print("Support Vector Machine Model Accuracy:")
+confusionMatrix(testClasse, predsvm)$overall["Accuracy"]
+```
+
+```{r}
+nbmodel <- train(classe~., method="nb", data=preprocessedData)
+```
+
+
+### Evaluating models
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+testing <- testing[,-1:-7]
+testing <- testing[,-5:-29]
+testing <- testing[,-18:-27]
+testing <- testing[,-27:-41]
+testing <- testing[,-30:-44]
+testing <- testing[,-31:-40]
+testing <- testing[,-43:-57]
+testing <- testing[,-44:-53]
+testing <- testing[,-53]
+
+processedtestingData <- predict(preproc, testing)
+```
+
+```{r}
+rfpredict <- predict(rfmodel, processedtestingData)
+ldapredict <- predict(ldamodel, processedtestingData)
+svmpredict <- predict(svmmodel, processedtestingData)
+
+predDF <- data.frame(rfpredict, ldapredict, svmpredict)
+```
+
+```{r}
+confusionMatrix(rfpredict, ldapredict)$overall['Accuracy']
+confusionMatrix(rfpredict, svmpredict)$overall['Accuracy']
+confusionMatrix(svmpredict, ldapredict)$overall['Accuracy']
+```
+
 
