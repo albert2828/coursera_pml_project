@@ -16,11 +16,18 @@ library(caret)
 library(e1071) # For svm
 ```
 
+This work is the project for the Practical Machine Learning course by John Hopkins University on Coursera. Data was downloaded from the course page and for more information about it, it can be consulted [here](http://groupware.les.inf.puc-rio.br/har.).
+
 
 ## Feature selection and preprocessing
 
 ```{r}
 training <- read.csv("./data/pml-training.csv", header = T)
+```
+
+In this part of the work, I use the "training" dataset provided by Coursera. The data set consists of 160 variables and over 19 thousand observation. There are a lot of variables that contains NA values or no values at all, but theese seem to be some measures, like mean or variance, about other variables, so I drop them.
+
+```{r}
 training$classe <- as.factor(training$classe)
 training <- training[,-1:-7]
 training <- training[,-5:-29]
@@ -32,6 +39,7 @@ training <- training[,-43:-57]
 training <- training[,-44:-53]
 ```
 
+For the cross validation, I split the data into train, test and validation sets. Validation set is about twenty percent of the total data, train is about seventy percent of the rest.
 
 ```{r}
 set.seed(3455)
@@ -43,6 +51,7 @@ trainData <- buildData[inTrain,]
 testData <- buildData[-inTrain,]
 ```
 
+The preprocessing part consists of a principal component analysis, in order to reduce the dimensions of data. Also, I normalize the data to prevent reduce bias and variance.
 
 ```{r}
 set.seed(1212)
@@ -55,6 +64,7 @@ preprocessedData$classe <- trainClasse
 
 ### Model tunning
 
+I start with three algorithms: random forest, linear discriminant analysis and support vector machine.
 ```{r, echo=F}
 set.seed(22)
 rfmodel <- train(classe~., method="rf", data = preprocessedData,
@@ -63,6 +73,7 @@ ldamodel <- train(classe~., method="lda", data = preprocessedData)
 svmmodel <- svm(classe~., data=preprocessedData)
 ```
 
+I predict these models on the test set to evaluate out of sample error and I check the accuracy of these models on the test set.
 ```{r}
 testClasse <- testData$classe; testData <- testData[,-53]
 processedTestData <- predict(preproc, testData)
@@ -70,9 +81,7 @@ processedTestData$classe <- testClasse
 predrf <- predict(rfmodel, processedTestData)
 predlda <- predict(ldamodel, processedTestData)
 predsvm <- predict(svmmodel, processedTestData)
-```
 
-```{r}
 print("Random Forest model Accuracy:")
 confusionMatrix(testClasse, predrf)$overall["Accuracy"]
 print("Linear Discriminant Analysis model Accuracy: ")
@@ -81,23 +90,25 @@ print("Support Vector Machine model Accuracy:")
 confusionMatrix(testClasse, predsvm)$overall["Accuracy"]
 ```
 
+Random Forest and support vector machine seem to have a good performance, but linear discriminant analysis doesn't. That's why I decided to fit a boosting method instead.
+
 ```{r, include=F}
 gmbmodel <- train(classe~., method="gbm", data = preprocessedData)
 ```
 
+Boosting seems to have a better accuracy.
 ```{r}
 predgbm <- predict(gmbmodel, processedTestData)
 print("Boosting model Accuracy:")
 confusionMatrix(testClasse, predgbm)$overall["Accuracy"]
 ```
 
+Finally, I stack the three methods in order to improve a little the accuracy, so I trained in the predictions on the test data and train a random forest.
 ```{r}
 predDF <- data.frame(predrf, predsvm, predgbm, classe=testClasse)
 combModel <- train(classe~., method="rf", data=predDF,
                    trControl = trainControl("cv", number = 3))
-```
 
-```{r}
 valClasse <- validationData$classe
 validationData <- validationData[,-53]
 proccesedvalData <- predict(preproc, validationData)
@@ -110,11 +121,15 @@ predDF <- data.frame(predrf, predsvm, predgbm)
 predComb <- predict(combModel, predDF)
 ```
 
+Stacking these models seem to improve the accuracy. 
 ```{r}
 print("Combined model Accuracy on validation data:")
 (combined.model <- confusionMatrix(valClasse, predComb)$overall["Accuracy"])
 ```
 
+### Comparing models
+
+In order to select a model, I compare the accuracy of all models on the validation set.
 ```{r}
 rf.model <- confusionMatrix(valClasse, predrf)$overall["Accuracy"]
 svm.model <- confusionMatrix(valClasse, predsvm)$overall["Accuracy"]
@@ -122,38 +137,5 @@ gbm.model <- confusionMatrix(valClasse, predgbm)$overall["Accuracy"]
 (models.accuracy <- data.frame(rf.model, svm.model, gbm.model, combined.model))
 ```
 
-
-### Evaluating models
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```{r}
-
-```
-
-```{r}
-rfpredict <- predict(rfmodel, processedtestingData)
-ldapredict <- predict(ldamodel, processedtestingData)
-svmpredict <- predict(svmmodel, processedtestingData)
-
-predDF <- data.frame(rfpredict, ldapredict, svmpredict)
-```
-
-```{r}
-confusionMatrix(rfpredict, ldapredict)$overall['Accuracy']
-confusionMatrix(rfpredict, svmpredict)$overall['Accuracy']
-confusionMatrix(svmpredict, ldapredict)$overall['Accuracy']
-```
-
+It seems that random forest and the combined models have similar accuracy, so just for simplicity I will choose the random forest model.
 
