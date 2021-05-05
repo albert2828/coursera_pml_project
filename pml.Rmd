@@ -13,18 +13,14 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(dplyr)
 library(caret)
-library(e1071)
-library(klaR)
+library(e1071) # For svm
 ```
 
-```{r}
-training <- read.csv("./data/pml-training.csv", header = T)
-testing <- read.csv("./data/pml-testing.csv", header = T)
-```
 
 ## Feature selection and preprocessing
 
 ```{r}
+training <- read.csv("./data/pml-training.csv", header = T)
 training$classe <- as.factor(training$classe)
 training <- training[,-1:-7]
 training <- training[,-5:-29]
@@ -42,7 +38,7 @@ set.seed(3455)
 inBuild <- createDataPartition(training$classe, p=0.8, list = F)
 buildData <- training[inBuild,]
 validationData <- training[-inBuild,]
-inTrain <- createDataPartition(buildData$classe, p=0.8, list = F)
+inTrain <- createDataPartition(buildData$classe, p=0.7, list = F)
 trainData <- buildData[inTrain,]
 testData <- buildData[-inTrain,]
 ```
@@ -81,12 +77,49 @@ print("Random Forest model Accuracy:")
 confusionMatrix(testClasse, predrf)$overall["Accuracy"]
 print("Linear Discriminant Analysis model Accuracy: ")
 confusionMatrix(testClasse, predlda)$overall["Accuracy"]
-print("Support Vector Machine Model Accuracy:")
+print("Support Vector Machine model Accuracy:")
 confusionMatrix(testClasse, predsvm)$overall["Accuracy"]
 ```
 
+```{r, include=F}
+gmbmodel <- train(classe~., method="gbm", data = preprocessedData)
+```
+
 ```{r}
-nbmodel <- train(classe~., method="nb", data=preprocessedData)
+predgbm <- predict(gmbmodel, processedTestData)
+print("Boosting model Accuracy:")
+confusionMatrix(testClasse, predgbm)$overall["Accuracy"]
+```
+
+```{r}
+predDF <- data.frame(predrf, predsvm, predgbm, classe=testClasse)
+combModel <- train(classe~., method="rf", data=predDF,
+                   trControl = trainControl("cv", number = 3))
+```
+
+```{r}
+valClasse <- validationData$classe
+validationData <- validationData[,-53]
+proccesedvalData <- predict(preproc, validationData)
+
+predrf <- predict(rfmodel, proccesedvalData)
+predsvm <- predict(svmmodel, proccesedvalData)
+predgbm <- predict(gmbmodel, proccesedvalData)
+predDF <- data.frame(predrf, predsvm, predgbm)
+
+predComb <- predict(combModel, predDF)
+```
+
+```{r}
+print("Combined model Accuracy on validation data:")
+(combined.model <- confusionMatrix(valClasse, predComb)$overall["Accuracy"])
+```
+
+```{r}
+rf.model <- confusionMatrix(valClasse, predrf)$overall["Accuracy"]
+svm.model <- confusionMatrix(valClasse, predsvm)$overall["Accuracy"]
+gbm.model <- confusionMatrix(valClasse, predgbm)$overall["Accuracy"]
+(models.accuracy <- data.frame(rf.model, svm.model, gbm.model, combined.model))
 ```
 
 
@@ -106,17 +139,7 @@ nbmodel <- train(classe~., method="nb", data=preprocessedData)
 
 
 ```{r}
-testing <- testing[,-1:-7]
-testing <- testing[,-5:-29]
-testing <- testing[,-18:-27]
-testing <- testing[,-27:-41]
-testing <- testing[,-30:-44]
-testing <- testing[,-31:-40]
-testing <- testing[,-43:-57]
-testing <- testing[,-44:-53]
-testing <- testing[,-53]
 
-processedtestingData <- predict(preproc, testing)
 ```
 
 ```{r}
