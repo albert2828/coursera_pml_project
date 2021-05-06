@@ -1,3 +1,5 @@
+library(caret)
+
 testing <- read.csv("./data/pml-testing.csv", header = T)
 
 testing <- testing[,-1:-7]
@@ -11,3 +13,5 @@ testing <- testing[,-44:-53]
 testing <- testing[,-53]
 
 processedtestingData <- predict(preproc, testing)
+
+predictions <- predict(rfmodel, processedtestingData)
