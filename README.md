@@ -12,8 +12,9 @@ The models that were considered in order to complete the task were random forest
 These models were above 90% accutate (except LDA, which was discarted). Later, an ensembling learning model where considered, but accuracy dit not inproved,
 so the final model selection was random forest.
 
+A compiled version of the index.html file can be viewed [here](https://albert2828.github.io/practical_ml_coursera/).
 
 Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. 
 Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
 
-Read more: (http://groupware.les.inf.puc-rio.br/har.#wle_paper_section#ixzz6w2OVCv1R)
+Read more: http://groupware.les.inf.puc-rio.br/har.#wle_paper_section#ixzz6w2OVCv1R
